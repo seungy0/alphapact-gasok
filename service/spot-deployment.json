@@ -1,0 +1,11 @@
+{
+  "ready": true,
+  "chainId": 91342,
+  "contract": "0xe428391c9826781bb0456b18868a2210c1215256",
+  "publisher": "0x2b7FE3e2D4f97Ca49A5B9afeeBF1Eb34A3063ee6",
+  "transactionHash": "0xfee35dae8374873c0af7bfa28ac75a9be1bae52a9487c81de725eaebb976c44f",
+  "block": "40408396",
+  "codeHash": "0xa35fe14f32dc991b22efa2b4f8670852b297cb30e4e46d206c67cd6bc8384566",
+  "sourceHash": "0x8ab8da2b9e186e4183c9d00b98795d258c929e029ed5539deb1d1733c64b30f1",
+  "deployedAt": "2026-11-04T00:51:56.632Z"
+}

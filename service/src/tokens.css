@@ -1,0 +1,8 @@
+@font-face{font-family:SUIT;src:url('/fonts/suit/SUIT-Variable.woff2') format('woff2');font-style:normal;font-weight:100 900;font-display:swap}
+:root{
+ --canvas:#fff;--surface:#fff;--surface-alt:#f7f8f6;--rail:#fafbf9;--rail-ink:#515653;--rail-hover:#edf0eb;
+ --ink:#171918;--ink-soft:#515653;--muted:#69706a;--line:#e4e6e4;--line-strong:#cfd4ce;--scroll:#c9cec9;
+ --primary:#171918;--primary-hover:#353a36;--on-primary:#fff;--primary-tint:#edf0eb;--primary-tint-hover:#e1e5df;--chosen-surface:#f7f8f6;--row-foot:#fff;
+ --positive:#276449;--positive-bg:#edf5ef;--positive-ink:#276449;--amber:#775d24;--amber-bg:#f7f2e7;--amber-ink:#775d24;
+ --danger:#9c343a;--danger-bg:#fbf0f1;--danger-hover:#f7e3e5;--eth-bg:#eceef7;--eth-ink:#525d8c;--usd-bg:#edf5ef;--usd-ink:#276449;
+}

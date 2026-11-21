@@ -1,0 +1,32 @@
+{
+  "schema": "ALPHAPACT_UPBIT_SPOT_V1",
+  "venue": "UPBIT_KR",
+  "execution": "READ_AND_ORDER_VALIDATION_ONLY",
+  "fixture": true,
+  "exportedAt": "2026-11-04T00:59:55.986Z",
+  "streamId": "0x05c6464393571be090780eb8be738643f0742e7f41d32b71f3329c928b1bfb99",
+  "records": [
+    {
+      "version": 1,
+      "sequence": 1,
+      "previousHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "kind": "QA_INTEGRITY_CHECK",
+      "at": "2026-11-04T00:59:48.517Z",
+      "policyHash": "0x0ad78758368da7dfd4aed840a014b501dd8b5af646d3ad69ba6a49fbe964ff47",
+      "salt": "0x75ceaad1d9f3df536f4592ff127ee0073ebf4a2f3715ee22dd4276ef853bde37",
+      "payload": {
+        "fixture": true,
+        "exchangeCalls": 0,
+        "purpose": "Synthetic record integrity test only"
+      },
+      "hash": "0xdf07c95fdba9e4bc1110b12bf8c494805056e629c469a105b3415fa4c46e0908"
+    }
+  ],
+  "anchor": {
+    "transactionHash": "0x8f6c0b817ab0a250d56b1a80dcea503c45d3bc8babbcd9ae1c8fd26e8e830e0f",
+    "sequence": 1,
+    "evidenceHead": "0xdf07c95fdba9e4bc1110b12bf8c494805056e629c469a105b3415fa4c46e0908",
+    "checkpointHash": "0xf5db282c02ca98728d45b9033e8815beb10cdecaf88c46ec249d62cecf6ef244",
+    "block": "40408877"
+  }
+}

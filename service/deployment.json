@@ -1,0 +1,67 @@
+{
+  "ready": true,
+  "chainId": 91342,
+  "keeper": "0x2b7FE3e2D4f97Ca49A5B9afeeBF1Eb34A3063ee6",
+  "pyth": "0x2880aB155794e7179c9eE2e38200202908C17B43",
+  "feedId": "0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace",
+  "budget": "0x59c2fee2e4e04a0f15e2217380035f50bf3567c0",
+  "position": "0xe9ee6d309110eb6161eac625e1f23dd8ca06bfa2",
+  "quote": "0x51ae613d5e38ea911bc1162095f88ac96a968c4c",
+  "router": "0xeae145372ca27a7f97e047cb3d20f933e7828255",
+  "factory": "0xb6ae5aa931b5afb2754640e594398071357302c4",
+  "deployedBlock": "40114311",
+  "deployedAt": "2026-10-31T15:12:22.038Z",
+  "sourceHash": "0x89fe1c5505f2f6af20d05300734ea2875210bd8b3f88e42ee5260a1b4c1cbbf7",
+  "codeHashes": {
+    "budget": "0xa018ca594c07fc193cf76304941412f67447120b56006188d78ec276f35dcdea",
+    "position": "0xcc30621646568498206392a91d08a727bd7855f5eabf8e3a4a9c1989fddc2755",
+    "quote": "0xe755d3d50540c8fc30b8efcf5203677beb5fcdd886307c823a1770f4780d3cf5",
+    "router": "0x27c623ac1dfb767cb76c0ca388294162b094820aa48c90351fb8a7dd5fe3ab99",
+    "factory": "0x968cc2470b793a97bc95773e5afbe5e829eb12d19ddb69b34dc62ef4900d6125"
+  },
+  "transactions": {
+    "budget": {
+      "hash": "0xd15ef1043a538088ac3a27bdf5abe779aebddfce80b5804978e438a7eb54b21d",
+      "block": "40114311"
+    },
+    "position": {
+      "hash": "0x76551b0df557ea013a96a7b317038cd88dab4a1b252226f900f32804cd065953",
+      "block": "40114312"
+    },
+    "quote": {
+      "hash": "0x9a77d4669e3affb33d0e481d0f4321b5858b68dc7ea712bce32bc264121232df",
+      "block": "40114312"
+    },
+    "router": {
+      "hash": "0x869ba14190acc4aaacf82043c2e0945aa67be8021ceadd841da687dc0567dbef",
+      "block": "40114313"
+    },
+    "factory": {
+      "hash": "0x17b4829b1294c601d8e072e9a4cb6975256dbc1803f8ba76fc292970fb327db5",
+      "block": "40114313"
+    },
+    "budgetFactory": {
+      "hash": "0x491d9f54fbe129ae471e222cdaa392bc6a00845226f4f576e40d1ddd20a25a4b",
+      "confirmed": true,
+      "block": "40114343"
+    },
+    "positionFactory": {
+      "hash": "0x6f4ea9dc6908bfa3d7785e088c26c766773baa6b4dcd286a44afae12282dcc70",
+      "confirmed": true,
+      "block": "40114343"
+    },
+    "budgetSeed": {
+      "hash": "0xf99f0e15bff8af0f2cb6fba2242915e933ec90a851d6b2cebc293ce486ae26f6",
+      "confirmed": true,
+      "block": "40114419"
+    },
+    "positionSeed": {
+      "hash": "0x91d1a60fafbdbeefd62bc4f5249eb1ea2e08f7bfe9ca47b9c1a13d669fd5cd6f",
+      "confirmed": true,
+      "block": "40114423"
+    }
+  },
+  "venueMode": "SIMULATED_TEST_VENUE",
+  "priceSource": "OPERATOR_PUBLISHED_COINBASE_KRAKEN",
+  "gasSponsored": true
+}

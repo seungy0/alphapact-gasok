@@ -1,0 +1,58 @@
+{
+  "name": "forwardproof",
+  "version": "0.1.0",
+  "description": "AlphaPact GIWA Sepolia strategy accounts and Upbit spot connection pilot",
+  "private": true,
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "service:build": "vite build --config service/vite.config.ts",
+    "service:preview": "vite --config service/vite.config.ts",
+    "test:service": "hardhat test mocha test/AlphaPactTestnetService.test.ts test/AlphaPactStrategyAccount.test.ts && node --test --import tsx tests/testnet-policy.test.ts tests/testnet-recovery.test.ts tests/testnet-rpc.test.ts tests/testnet-entry.test.ts tests/testnet-wallet.test.ts && node --test tests/testnet-gas-helper.test.mjs",
+    "test:spot": "hardhat test mocha test/AlphaPactSpotCheckpoints.test.ts && node --test --import tsx tests/spot-service.test.ts && node --test tests/upbit-spot-pilot.test.mjs",
+    "spot:verify": "node --import tsx scripts/verify-spot-record.ts",
+    "test": "npm run test:service && npm run test:spot"
+  },
+  "dependencies": {
+    "@metamask/connect-evm": "^2.1.1",
+    "@openzeppelin/contracts": "^5.4.0",
+    "drizzle-orm": "^0.45.2",
+    "next": "16.3.2",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "viem": "^2.55.4"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "1.53.1",
+    "@cloudflare/workers-types": "^5.20260825.1",
+    "@nomicfoundation/hardhat-toolbox-mocha-ethers": "^3.0.7",
+    "@nomicfoundation/hardhat-verify": "^3.0.21",
+    "@tailwindcss/postcss": "4.2.1",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "22.19.19",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.2",
+    "@vitejs/plugin-rsc": "0.5.34",
+    "drizzle-kit": "^0.31.10",
+    "eslint": "9.39.4",
+    "eslint-config-next": "16.2.6",
+    "hardhat": "3.14.0",
+    "react-server-dom-webpack": "19.2.8",
+    "tailwindcss": "4.2.1",
+    "tsx": "^4.20.6",
+    "typescript": "5.9.3",
+    "vinext": "1.0.0-beta.8",
+    "vite": "8.2.2",
+    "wrangler": "4.125.0"
+  },
+  "overrides": {
+    "postcss": "8.5.26",
+    "nanoid": "3.3.18",
+    "sharp": "0.35.3",
+    "uuid": "11.1.1",
+    "ws": "8.21.0"
+  },
+  "type": "module"
+}
