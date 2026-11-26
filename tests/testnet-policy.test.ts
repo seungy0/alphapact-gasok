@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { decide } from "../service/protocol.ts";
+import { evaluateStrategy } from "../service/evaluation.ts";
 
 const base={strategyId:0,cash:10_000_000_000n,position:0n,priceE8:250_000_000_000n,
  tradeCap:1_000_000_000n,dayCap:5_000_000_000n,spent:0n,lastTradeAt:0n,now:1_800_000_000n};
@@ -11,6 +12,43 @@ test("rolling turnover is not reset by a round trip",()=>assert.deepEqual(decide
 test("strategy does not bypass the minimum onchain interval",()=>assert.deepEqual(decide({...base,lastTradeAt:base.now-899n}),{hold:"다음 매매 간격 대기"}));
 test("DCA uses its longer interval and 500 unit ceiling",()=>{assert.deepEqual(decide({...base,strategyId:1}),{buy:true,amount:500_000_000n,reason:"4시간 정기 매수"});assert.deepEqual(decide({...base,strategyId:1,lastTradeAt:base.now-900n}),{hold:"다음 매매 간격 대기"});});
 test("missing prices and empty accounts do not create trades",()=>{assert.ok("hold"in decide({...base,priceE8:0n}));assert.deepEqual(decide({...base,cash:0n}),{hold:"계정 잔액 없음"});});
+
+test("the latest hold replaces the initial trade candidate without exchanging", async () => {
+ const updates: unknown[] = [];
+ await evaluateStrategy(decide(base),
+  async () => ({ price: "refreshed", decision: { hold: "목표 비중 유지 중" } }),
+  async () => assert.fail("A hold must not exchange tokens"),
+  async update => { updates.push(update); });
+ assert.deepEqual(updates, [
+  { status: "checking", reason: "ETH 비중을 목표에 맞춰 매수" },
+  { status: "waiting", reason: "목표 비중 유지 중" },
+ ]);
+});
+
+test("a receipt confirms the refreshed decision", async () => {
+ const updates: unknown[] = [];
+ const decision = { buy: false, amount: 100n, reason: "ETH 비중을 목표에 맞춰 매도" };
+ const hash = `0x${"ab".repeat(32)}` as const;
+ await evaluateStrategy(decide(base),
+  async () => ({ price: "refreshed", decision }),
+  async (price, refreshedDecision) => {
+   assert.equal(price, "refreshed");
+   assert.deepEqual(refreshedDecision, decision);
+   return hash;
+  },
+  async update => { updates.push(update); });
+ assert.deepEqual(updates.at(-1), { status: "confirmed", reason: decision.reason, hash });
+});
+
+test("a receipt timeout replaces the tentative decision with an unconfirmed result", async () => {
+ const updates: unknown[] = [];
+ const timeout = new Error("receipt timeout");
+ await assert.rejects(evaluateStrategy(decide(base),
+  async () => ({ price: "refreshed", decision: decide(base) }),
+  async () => { throw timeout; },
+  async update => { updates.push(update); }), timeout);
+ assert.deepEqual(updates.at(-1), { status: "unconfirmed" });
+});
 
 // The test publisher must stop on stale/divergent data; it is not a cryptographic oracle.
 import { compareQuotes } from '../service/market.ts';

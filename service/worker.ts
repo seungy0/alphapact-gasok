@@ -1,7 +1,7 @@
 import { DurableObject } from "cloudflare:workers";
 import {
   createPublicClient, createWalletClient, decodeEventLog, encodeFunctionData, getAddress,
-  hashTypedData, isAddress, isHex, keccak256, toHex,
+  hashTypedData, isAddress, isHex, keccak256, parseEventLogs, toHex,
   type Address, type Hex,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
@@ -11,6 +11,7 @@ import {
   tokenAbi, ZERO_SESSION, type Session,
 } from "./protocol";
 import { fetchTestPrice, type TestPrice } from "./market";
+import { evaluateStrategy, type AccountEvaluation } from "./evaluation";
 import { giwaTransport } from "./rpc";
 import { SpotService, type SpotAnchorRequest, type SpotEnvironment } from "./spot-service";
 import { spotCheckpointAbi, spotCheckpointDeployment } from "./spot-chain";
@@ -70,7 +71,8 @@ export class TestnetOperator extends DurableObject<Env> {
     const s = active as readonly [Address, bigint, bigint, bigint, number, Hex];
     const session: Session = { strategist: s[0], expiresAt: s[1], maxTradeBudget: s[2], maxRollingDayBudget: s[3], maxSlippageBps: s[4], strategyHash: s[5] };
     const activity = await this.ctx.storage.get<Activity[]>(`activity:${account.toLowerCase()}`) ?? [];
-    const evaluation = await this.ctx.storage.get<{ at: string; reason: string }>(`evaluation:${account.toLowerCase()}`);
+    const latest = await this.ctx.storage.get<AccountEvaluation>(`evaluation:${account.toLowerCase()}`);
+    const evaluation = latest?.sessionId === undefined || latest.sessionId === String(epoch) ? latest : undefined;
     return { address: account, owner: owner as Address, session, sessionId: epoch as bigint, nextNonce: nonce as bigint, authorizationNonce: authNonce as bigint,
       spent: spent as bigint, lastTradeAt: lastTradeAt as bigint, cash, position, strategyId,
       active: s[0].toLowerCase() === config.keeper.toLowerCase() && s[1] > BigInt(Math.floor(Date.now() / 1000)), activity, evaluation };
@@ -152,14 +154,14 @@ export class TestnetOperator extends DurableObject<Env> {
     if (!state.active) return;
     const choose = (value: Price) => decide({ strategyId: state.strategyId, cash: state.cash, position: state.position, priceE8: BigInt(value.priceE8),
       tradeCap: state.session.maxTradeBudget, dayCap: state.session.maxRollingDayBudget, spent: state.spent, lastTradeAt: state.lastTradeAt, now: BigInt(Math.floor(Date.now() / 1000)) });
-    let decision = choose(price);
-    await this.ctx.storage.put(`evaluation:${account.toLowerCase()}`, { at: new Date().toISOString(), reason: "hold" in decision ? decision.hold : decision.reason });
-    if ("hold" in decision) return;
-    // Publishing costs test gas. Idle, revoked and interval-limited accounts
-    // need no onchain price update; the public market view still refreshes.
-    price = await this.updateOracle();
-    decision = choose(price);
-    if ("hold" in decision) return;
+    await evaluateStrategy(choose(price), async () => {
+      // Idle accounts need no onchain price update.
+      const latestPrice = await this.updateOracle();
+      return { price: latestPrice, decision: choose(latestPrice) };
+    }, (latestPrice, decision) => this.exchange(account, state, latestPrice, decision), evaluation =>
+      this.ctx.storage.put(`evaluation:${account.toLowerCase()}`, { ...evaluation, at: new Date().toISOString(), sessionId: String(state.sessionId) }));
+  }
+  private async exchange(account: Address, state: { sessionId: bigint; nextNonce: bigint; strategyId: number }, price: Price, decision: { buy: boolean; amount: bigint; reason: string }) {
     const now = BigInt(Math.floor(Date.now() / 1000));
     const reference = decision.buy ? decision.amount * 100_000_000_000_000_000_000n / BigInt(price.priceE8) : decision.amount * BigInt(price.priceE8) / 100_000_000_000_000_000_000n;
     const minimum = (reference * 9_920n + 9_999n) / 10_000n;
@@ -167,9 +169,12 @@ export class TestnetOperator extends DurableObject<Env> {
     const result = await this.send(`swap:${account}:${state.sessionId}:${state.nextNonce}:${price.publishedAt}`, account, encodeFunctionData({ abi: accountAbi, functionName: "swap", args: [decision.buy, decision.amount, minimum,
       state.sessionId, state.nextNonce, now + 180n, signal] }));
     const receipt = await this.client.getTransactionReceipt({ hash: result.hash });
-    let output: string | undefined;
-    for (const log of receipt.logs) { try { const decoded = decodeEventLog({ abi: accountAbi, ...log }); if (decoded.eventName === "SwapExecuted") output = String(decoded.args.amountOut); } catch {} }
-    await this.record({ hash: result.hash, account, action: "SWAP", at: new Date().toISOString(), block: String(result.block), buy: decision.buy, amountIn: String(decision.amount), amountOut: output, reason: decision.reason });
+    const executed = parseEventLogs({ abi: accountAbi, eventName: "SwapExecuted", logs: receipt.logs }).find(event =>
+      event.address.toLowerCase() === account.toLowerCase() && event.args.signalHash === signal &&
+      event.args.sessionId === state.sessionId && event.args.nonce === state.nextNonce);
+    if (receipt.status !== "success" || !executed) throw new Error("계정의 교환 영수증을 확인하지 못했습니다.");
+    await this.record({ hash: result.hash, account, action: "SWAP", at: new Date().toISOString(), block: String(result.block), buy: decision.buy, amountIn: String(decision.amount), amountOut: String(executed.args.amountOut), reason: decision.reason });
+    return result.hash;
   }
   private async tick() {
     if (!config.ready || !this.wallet) return { ready: false };
@@ -230,7 +235,10 @@ export class TestnetOperator extends DurableObject<Env> {
       const result = await this.send(id, config.factory, encodeFunctionData({ abi: factoryAbi, functionName: "createAccount", args: [owner, strategyId, maxTradeBudget, maxRollingDayBudget, expiresAt, deadline, signature] }));
       const account = await this.client.readContract({ address: config.factory, abi: factoryAbi, functionName: "accounts", args: [owner, strategyId], blockNumber: result.block });
       await this.record({ ...result, block: String(result.block), account, action: "CREATE", at: new Date().toISOString() });
-      this.ctx.waitUntil(this.serialize(async () => { try { await this.tickAccount(account, await this.price()); } catch { await this.ctx.storage.put(`evaluation:${account.toLowerCase()}`, { at: new Date().toISOString(), reason: "첫 매매 조건 평가 중 · 다음 실행에서 다시 확인합니다." }); } }));
+      this.ctx.waitUntil(this.serialize(async () => {
+        try { await this.tickAccount(account, await this.price()); }
+        catch (error) { console.warn("Initial strategy evaluation could not finish", error); }
+      }));
       return { account, hash: result.hash };
     }
     if (body.kind !== "action") throw new Error("지원하지 않는 요청입니다.");

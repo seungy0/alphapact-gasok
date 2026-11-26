@@ -1,5 +1,6 @@
 import { createPublicClient, getAddress, isAddress, type Address, type Hex } from "viem";
 import { readOwnerAccounts } from "../chain-account";
+import type { AccountEvaluation } from "../evaluation";
 import { giwaTransport } from "../rpc";
 import { actionDomain, actionTypes, chain, createDomain, createTypes, deployment, sessionHash, strategyHash, ZERO_SESSION, type Session } from "../protocol";
 
@@ -10,7 +11,7 @@ export interface Account {
  address: Address; owner: Address; strategyId: number; cash: string; position: string; spent: string;
  sessionId: string; nextNonce: string; authorizationNonce: string; lastTradeAt: string; active: boolean;
  session: { strategist: Address; expiresAt: string; maxTradeBudget: string; maxRollingDayBudget: string; maxSlippageBps: number; strategyHash: Hex };
- activity: Activity[]; evaluation?: { at: string; reason: string };
+ activity: Activity[]; evaluation?: AccountEvaluation;
  rpcFallback?: boolean;
 }
 export interface Market { price: { priceE8: string; price: number; publishedAt: number }; history: Array<{ at: number; value: number }>; source: string }
