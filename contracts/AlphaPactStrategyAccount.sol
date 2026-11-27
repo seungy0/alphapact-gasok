@@ -55,6 +55,7 @@ contract AlphaPactStrategyAccount is ReentrancyGuard {
     uint256 public sessionId;
     uint256 public nextNonce;
     uint64 public lastTradeAt;
+    uint64 public sessionGrantedAt;
     uint256 private _rollingSpend;
     uint256 private _head;
     uint256 private _tail;
@@ -119,6 +120,7 @@ contract AlphaPactStrategyAccount is ReentrancyGuard {
             requested.maxSlippageBps == 0 || requested.maxSlippageBps > MAX_SLIPPAGE_BPS ||
             requested.strategyHash == bytes32(0)) revert InvalidConfiguration();
         session = requested;
+        sessionGrantedAt = uint64(block.timestamp);
         ++sessionId;
         emit SessionGranted(sessionId, requested.strategist, requested.expiresAt,
             requested.maxTradeBudget, requested.maxRollingDayBudget,
