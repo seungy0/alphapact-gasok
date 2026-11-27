@@ -16,6 +16,7 @@ import { giwaTransport } from "./rpc";
 import { SpotService, type SpotAnchorRequest, type SpotEnvironment } from "./spot-service";
 import { spotCheckpointAbi, spotCheckpointDeployment } from "./spot-chain";
 import { type SpotAnchor } from "./spot-domain";
+import { parseStrategyDraft, type CatalogStrategy } from "./strategy-catalog";
 
 interface Env extends SpotEnvironment { ASSETS: Fetcher; OPERATOR: DurableObjectNamespace; SPOT: DurableObjectNamespace; GIWA_RPC_URL: string; TESTNET_KEEPER_KEY?: string }
 type Activity = { hash: Hex; account: Address; action: string; at: string; block: string; buy?: boolean; amountIn?: string; amountOut?: string; reason?: string };
@@ -48,6 +49,25 @@ export class TestnetOperator extends DurableObject<Env> {
     this.wallet = env.TESTNET_KEEPER_KEY ? createWalletClient({ account: privateKeyToAccount(env.TESTNET_KEEPER_KEY as Hex), chain, transport }) : undefined;
   }
   private serialize<T>(job: () => Promise<T>): Promise<T> { const next = this.tail.then(job, job); this.tail = next.catch(() => undefined); return next; }
+  private async strategyCatalog(request: Request) {
+    const stored = await this.ctx.storage.get<CatalogStrategy[]>("demo-strategies") ?? [];
+    if (request.method === "GET") return json({ strategies: stored });
+    const draft = parseStrategyDraft(await boundedBody(request));
+    if (!draft) return json({ error: "전략 이름, 제작자 이름과 지원되는 매매 규칙을 확인해 주세요." }, 400);
+
+    const strategy = stored.find(item => item.name === draft.name && item.creator === draft.creator && item.scenario === draft.scenario);
+    if (strategy) return json({ strategy });
+    const now = Math.floor(Date.now() / 86_400_000);
+    const quota = await this.ctx.storage.get<{ day: number; count: number }>("demo-catalog-quota");
+    const count = quota?.day === now ? quota.count : 0;
+    if (count >= 100) return json({ error: "오늘 모의 전략 등록 한도에 도달했습니다. 내일 다시 시도해 주세요." }, 429);
+    const created = { ...draft, id: `demo-${crypto.randomUUID()}` };
+    await this.ctx.storage.put({
+      "demo-strategies": [created, ...stored].slice(0, 100),
+      "demo-catalog-quota": { day: now, count: count + 1 },
+    });
+    return json({ strategy: created }, 201);
+  }
   private async price(): Promise<Price> {
     const price = await fetchTestPrice();
     await this.ctx.storage.put("price-data", { price, fetchedAt: Date.now() });
@@ -263,6 +283,7 @@ export class TestnetOperator extends DurableObject<Env> {
   async fetch(request: Request) {
     try {
       const url = new URL(request.url);
+      if (url.pathname === "/strategy-catalog") return await this.serialize(() => this.strategyCatalog(request));
       if (url.pathname === "/spot-anchor" && request.method === "POST") {
         const checkpoint = await request.json() as SpotAnchorRequest;
         return json(await this.serialize(() => this.publishSpotCheckpoint(checkpoint)));
@@ -331,16 +352,19 @@ const worker = {
       return secure(await actor.fetch(new Request(upstream, { method: request.method, headers: request.headers,
         body: request.method === "POST" ? request.body : undefined })));
     }
-    const allowed = ["/api/status", "/api/market", "/api/accounts", "/api/account", "/api/relay"];
+    const allowed = ["/api/status", "/api/market", "/api/accounts", "/api/account", "/api/relay", "/api/strategy-catalog"];
     if (!allowed.includes(url.pathname)) return secure(json({ error: "요청을 찾지 못했습니다." }, 404));
     if (url.pathname === "/api/relay") {
       if (request.method !== "POST" || request.headers.get("origin") !== url.origin) return secure(json({ error: "이 서비스 화면에서 다시 요청해 주세요." }, 403));
+    } else if (url.pathname === "/api/strategy-catalog" && request.method === "POST") {
+      if (request.headers.get("origin") !== url.origin) return secure(json({ error: "이 서비스 화면에서 다시 요청해 주세요." }, 403));
     } else if (request.method !== "GET") return secure(json({ error: "지원하지 않는 요청입니다." }, 405));
     const headers = new Headers(request.headers);
     const ip = request.headers.get("cf-connecting-ip") ?? "local";
     headers.set("x-caller", keccak256(textEncoder.encode(ip)).slice(0, 26));
     const upstream = new URL(request.url); upstream.pathname = url.pathname.slice(4);
-    const actor = env.OPERATOR.get(env.OPERATOR.idFromName("giwa-sepolia-operator-v1"));
+    const actorName = url.pathname === "/api/strategy-catalog" ? "testnet-strategy-catalog-v1" : "giwa-sepolia-operator-v1";
+    const actor = env.OPERATOR.get(env.OPERATOR.idFromName(actorName));
     return secure(await actor.fetch(new Request(upstream, { method: request.method, headers, body: request.method === "POST" ? request.body : undefined })));
   },
   async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext) {

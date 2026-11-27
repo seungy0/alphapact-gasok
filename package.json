@@ -12,7 +12,8 @@
     "test:service": "hardhat test mocha test/AlphaPactTestnetService.test.ts test/AlphaPactStrategyAccount.test.ts && node --test --import tsx tests/testnet-policy.test.ts tests/testnet-recovery.test.ts tests/testnet-rpc.test.ts tests/testnet-entry.test.ts tests/testnet-wallet.test.ts && node --test tests/testnet-gas-helper.test.mjs",
     "test:spot": "hardhat test mocha test/AlphaPactSpotCheckpoints.test.ts && node --test --import tsx tests/spot-service.test.ts && node --test tests/upbit-spot-pilot.test.mjs",
     "spot:verify": "node --import tsx scripts/verify-spot-record.ts",
-    "test": "npm run test:service && npm run test:spot"
+    "test": "npm run test:service && npm run test:spot && npm run test:market",
+    "test:market": "hardhat test mocha test/AlphaPactCopySignalExecutor.test.ts && node --test --import tsx tests/performance-fee.test.ts"
   },
   "dependencies": {
     "@metamask/connect-evm": "^2.1.1",

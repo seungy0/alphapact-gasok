@@ -1,13 +1,16 @@
 # AlphaPact
 
-국내 현물 자동매매 이용자가 맡길 권한을 직접 정하고, 거래와 회수 결과를 확인하는 프로젝트입니다. 이 저장소에는 GASOK Phase 4 평가용 공개 데모의 소스가 들어 있습니다.
+AlphaPact는 제작자 전략을 선택해 자기 계정에서 따라가고, 이전 손실을 만회한 뒤 생긴 새 순이익에서 성과보수를 나누는 전략 마켓입니다. 이 저장소에는 GASOK Phase 4 평가용 공개 데모의 소스가 들어 있습니다.
 
 ## 심사위원 데모
 
-- [공개 데모](https://alphapact-testnet.yhs98.workers.dev/)
+- [전략 등록과 성과보수 모의 데모](https://phase4-review-alphapact-testnet.yhs98.workers.dev/)
+- [기존 GIWA Sepolia 실행 앱](https://alphapact-testnet.yhs98.workers.dev/app)
 - [지갑 없이 테스트 영수증 네 건 보기](https://alphapact-testnet.yhs98.workers.dev/#test-records)
 - [업비트 현물 공개 시세와 샘플 기록 대조](https://alphapact-testnet.yhs98.workers.dev/spot#spot-proof)
 - [소유자 직접 회수 영수증](https://sepolia-explorer.giwa.io/tx/0x13a83105a9ffea16c05d3cdc283ed33d23ae78241ab76a2d1fcbcef4e20b2386)
+
+성과보수 체험은 가상 가격으로 정산합니다. 이전 손실을 다 만회한 뒤 새 순이익의 8%를 제작자에게, 2%를 AlphaPact에 배분하는 예시입니다. 테스트 실행 앱과 모의 정산은 별개이며, 신규 등록 전략이 테스트넷에서 주문을 실행하지는 않습니다.
 
 ## GIWA Sepolia · Chain ID 91342
 
