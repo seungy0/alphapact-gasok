@@ -297,7 +297,7 @@ export class TestnetOperator extends DurableObject<Env> {
         return json(await this.copy.status());
       }
       if (url.pathname === "/copy/strategies") return json(await this.copy.list(url.searchParams.get("before")));
-      if (url.pathname === "/copy/accounts") return json(await this.copy.accounts(url.searchParams.get("owner")));
+      if (url.pathname === "/copy/accounts") return json(await this.copy.accounts(url.searchParams.get("owner"), url.searchParams.get("strategyId")));
       if (url.pathname === "/copy/status") return json({ lastTick: await this.copy.status() ?? null });
       if (url.pathname === "/copy/relay") {
         const body = await boundedBody(request);

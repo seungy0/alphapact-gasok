@@ -72,9 +72,15 @@ export class CopyOperator {
     return { ready: config.ready, market: config.market, strategies: items, before: cursor - BigInt(size) > 1n ? cursor - BigInt(size) : null };
   }
 
-  async accounts(ownerValue: unknown) {
+  async accounts(ownerValue: unknown, strategyValue: string | null) {
     const owner = address(ownerValue);
     if (!config.ready) return { accounts: [] };
+    if (strategyValue !== null) {
+      const strategyId = integer(strategyValue, 1n, 10n ** 24n);
+      const id = await this.client.readContract({ address: config.market, abi: copyAbi,
+        functionName: "subscriptionIdOf", args: [owner, strategyId] });
+      return { accounts: id === 0n ? [] : [await this.state(id)] };
+    }
     const count = await this.client.readContract({ address: config.market, abi: copyAbi, functionName: "ownerSubscriptionCount", args: [owner] });
     const ids = await Promise.all(Array.from({ length: Number(count > 8n ? 8n : count) }, (_, index) =>
       this.client.readContract({ address: config.market, abi: copyAbi, functionName: "ownerSubscriptionAt", args: [owner, count - 1n - BigInt(index)] })));

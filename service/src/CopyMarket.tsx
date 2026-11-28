@@ -18,6 +18,7 @@ const time = (seconds: number) => `${clock.format(seconds * 1_000)} KST`;
 const currentTime = () => Math.floor(Date.now() / 1_000);
 type Catalog = { ready: boolean; strategies: CopyStrategy[]; before: string | null };
 type Connection = { owner: Address; provider: Provider };
+const accountPath = (owner: Address, strategyId: string) => `copy/accounts?owner=${owner}&strategyId=${strategyId}`;
 
 function ReceiptLink({ hash, children }: { hash: Hex; children: string }) {
   return <a href={`${explorer}/tx/${hash}`} target="_blank" rel="noreferrer">{children}</a>;
@@ -74,6 +75,7 @@ export default function CopyMarket() {
   const [hash, setHash] = useState<Hex>();
   const detailsRef = useRef<HTMLElement>(null);
   const selected = catalog?.strategies.find(entry => entry.id === selectedId) ?? catalog?.strategies[0];
+  const strategyId = selected?.id;
   const active = accounts?.find(entry => entry.strategyId === selected?.id);
 
   async function loadCatalog(before?: string, signal?: AbortSignal) {
@@ -93,12 +95,15 @@ export default function CopyMarket() {
   useEffect(() => discoverWallets(setWallets), []);
 
   useEffect(() => {
-    if (!connection) return;
+    if (!connection || !strategyId) return;
+    const accountUrl = accountPath(connection.owner, strategyId);
+    setAccounts(undefined);
+    setAccountError("");
     const abort = new AbortController();
     let timer: number | undefined;
     async function refresh() {
       try {
-        const data = await api<{ accounts: CopySubscription[] }>(`copy/accounts?owner=${connection!.owner}`, undefined, abort.signal);
+        const data = await api<{ accounts: CopySubscription[] }>(accountUrl, undefined, abort.signal);
         if (!abort.signal.aborted) {
           setAccounts(data.accounts);
           setAccountError("");
@@ -122,7 +127,7 @@ export default function CopyMarket() {
       window.clearTimeout(timer);
       connection.provider.removeListener?.("accountsChanged", disconnect);
     };
-  }, [connection]);
+  }, [connection, strategyId]);
 
   async function run(initial: string, task: () => Promise<void>) {
     setPending(initial);
@@ -193,7 +198,7 @@ export default function CopyMarket() {
       const result = await api<{ hash: Hex }>("copy/relay", { kind, id: active.id, ...message, signature });
       setHash(result.hash);
       setNotice(kind === "stop" ? "팔로우가 중지됐습니다." : "테스트 토큰을 연결한 지갑으로 보냈습니다.");
-      setAccounts((await api<{ accounts: CopySubscription[] }>(`copy/accounts?owner=${connection.owner}`)).accounts);
+      setAccounts((await api<{ accounts: CopySubscription[] }>(accountPath(connection.owner, active.strategyId))).accounts);
     });
   }
 
