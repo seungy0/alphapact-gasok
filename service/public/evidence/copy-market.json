@@ -1,0 +1,51 @@
+{
+  "chainId": 91342,
+  "market": "0xc576b6767972e0c29f643a7c0a443f218d32e02d",
+  "keeper": "0x2b7FE3e2D4f97Ca49A5B9afeeBF1Eb34A3063ee6",
+  "strategyId": "2",
+  "registration": "0x092047dcefc8125294a17ee81381d8b7eb9440bf0c24874b96bb686f7cd44d66",
+  "strategy": {
+    "strategyId": "2",
+    "creator": "0x1a58D1EcAf90b06DCC5f08D7AEF3F6A86E189F67",
+    "name": "ETH 정기 매수",
+    "amount": "250000000",
+    "interval": "900"
+  },
+  "followers": [
+    {
+      "id": "2",
+      "owner": "0x1bdCe8A0fA2d9a36E08D67CAc26536d4825C4576",
+      "strategyId": "2",
+      "account": "0x2Ba1a240fA51E889fb849512615d7F14Bb857694",
+      "rule": "0xe2d8D277d92e6C5Ca09448B2363044aC1e289958",
+      "startsAt": "1795874534",
+      "followHash": "0x7e66e129797b4d471c22220e244b6b3ee0cb3531c06b8ad64e56060a1fbdab05",
+      "hash": "0x2281aed5c752c80eb4eeb99e37d96c0fb4c3f4b72cc886bc6eb265d9e107c1df",
+      "spent": "100000000",
+      "received": "49850000000000000",
+      "block": "42529468",
+      "blockTime": "1795874584",
+      "secondsAfterWindowOpened": "50",
+      "tokenBalance": "49850000000000000"
+    },
+    {
+      "id": "3",
+      "owner": "0xeB03d8A241521343f77a704bB6cD3844e86BD23d",
+      "strategyId": "2",
+      "account": "0x755B2575741E69275c925749418796793E9E46ae",
+      "rule": "0xB45C43532B17e04269aD53901dd6460DD3241673",
+      "startsAt": "1795874603",
+      "followHash": "0xc4b4a40765fd38983099d74d557f41d80983444786f280a1e9b9edbf3ad85a8a",
+      "hash": "0x46bfbc52ec52328beaa2edb5707feaa8ff8bbeb5012c5ae2cc5dddee0741c0d9",
+      "spent": "250000000",
+      "received": "124625000000000000",
+      "block": "42529546",
+      "blockTime": "1795874662",
+      "secondsAfterWindowOpened": "59",
+      "tokenBalance": "124625000000000000"
+    }
+  ],
+  "observedAt": "2026-11-28T14:06:12.494Z",
+  "venueMode": "SIMULATED_TEST_VENUE",
+  "priceMode": "FIXED_TEST_QUOTE"
+}

@@ -1,5 +1,8 @@
 import { http, type Transport } from "viem";
 
+const rateLimited = (failure: unknown) =>
+  /over rate limit|rate.?limit|too many requests|\b429\b/i.test(String((failure as Error)?.message ?? failure));
+
 /** One queue per operator, shared by reads and the transaction signer. */
 export function queueRpc<T, R>(request: (args: T) => Promise<R>, options: {
   now?: () => number; wait?: (milliseconds: number) => Promise<void>;
@@ -15,8 +18,7 @@ export function queueRpc<T, R>(request: (args: T) => Promise<R>, options: {
         lastStarted = now();
         try { return await request(args); }
         catch (failure) {
-          const message = String((failure as Error)?.message ?? failure);
-          if (attempt >= 3 || !/over rate limit|rate.?limit|too many requests|\b429\b/i.test(message)) throw failure;
+          if (attempt >= 3 || !rateLimited(failure)) throw failure;
           // Replaying a signed raw transaction keeps its hash and nonce.
           await wait(2_000 * 2 ** attempt);
         }
@@ -28,12 +30,21 @@ export function queueRpc<T, R>(request: (args: T) => Promise<R>, options: {
   };
 }
 
-export function giwaTransport(url: string): Transport {
+export function giwaTransport(url: string, alternateUrl?: string): Transport {
   const base = http(url, { timeout: 12_000, retryCount: 0 });
+  const alternate = alternateUrl ? http(alternateUrl, { timeout: 8_000, retryCount: 0 }) : undefined;
   let queued: ReturnType<typeof queueRpc> | undefined;
   return options => {
     const transport = base(options);
-    queued ??= queueRpc(args => transport.request(args as Parameters<typeof transport.request>[0]));
+    const fallback = alternate?.(options);
+    queued ??= queueRpc(async input => {
+      const args = input as Parameters<typeof transport.request>[0];
+      try { return await transport.request(args); }
+      catch (failure) {
+        if (!fallback || (!rateLimited(failure) && !/TimeoutError|HttpRequestError/.test((failure as Error)?.name))) throw failure;
+        return fallback.request(args);
+      }
+    });
     return { ...transport, request: queued as typeof transport.request };
   };
 }

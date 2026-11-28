@@ -165,7 +165,7 @@ export default function StrategyMarket() {
           <a aria-current="page" href="#strategies">전략 마켓</a>
           <a href="#giwa-record">GIWA 테스트 기록</a>
         </nav>
-        <a className="market-outline" href={`${testnetApp}/app`}>테스트넷 앱 <Arrow external/></a>
+        <a className="market-outline" href="/copy">GIWA 전략 마켓 <Arrow/></a>
       </div>
     </header>
 

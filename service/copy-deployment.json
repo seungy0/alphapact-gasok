@@ -1,0 +1,17 @@
+{
+  "ready": true,
+  "chainId": 91342,
+  "market": "0xc576b6767972e0c29f643a7c0a443f218d32e02d",
+  "budget": "0x76c770E7f403432dC619B5B6FBCD0d99527ECCD2",
+  "position": "0x83a69c90FAE2771d96B94c2ff7307beca73B357b",
+  "referenceQuote": "0x9776565fc4F537B9956E1D3b1dd295F65a350820",
+  "router": "0xFa220068066b1d25e54007b653FCeAC2c21eFbeF",
+  "executor": "0x22F4244d51afCEc84EA622b22842e70a57D1D193",
+  "keeper": "0x2b7FE3e2D4f97Ca49A5B9afeeBF1Eb34A3063ee6",
+  "hash": "0x1df98a0b0ecf5571b400f05b218c6badddf1b22aca773144f283d8d85a888241",
+  "block": "42528883",
+  "marketCodeHash": "0x3d748ccbe7fc8bc7d9dc8f02552e18e2bc0d13a32f520e60fdd0ecfd15333033",
+  "priceMode": "FIXED_TEST_QUOTE",
+  "testPrice": 2000,
+  "venueMode": "SIMULATED_TEST_VENUE"
+}

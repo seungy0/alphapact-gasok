@@ -17,6 +17,7 @@ import { SpotService, type SpotAnchorRequest, type SpotEnvironment } from "./spo
 import { spotCheckpointAbi, spotCheckpointDeployment } from "./spot-chain";
 import { type SpotAnchor } from "./spot-domain";
 import { parseStrategyDraft, type CatalogStrategy } from "./strategy-catalog";
+import { CopyOperator } from "./copy-operator";
 
 interface Env extends SpotEnvironment { ASSETS: Fetcher; OPERATOR: DurableObjectNamespace; SPOT: DurableObjectNamespace; GIWA_RPC_URL: string; TESTNET_KEEPER_KEY?: string }
 type Activity = { hash: Hex; account: Address; action: string; at: string; block: string; buy?: boolean; amountIn?: string; amountOut?: string; reason?: string };
@@ -42,11 +43,13 @@ export class TestnetOperator extends DurableObject<Env> {
   private tail: Promise<unknown> = Promise.resolve();
   private client;
   private wallet;
+  private copy;
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
-    const transport = giwaTransport(env.GIWA_RPC_URL);
+    const transport = giwaTransport(env.GIWA_RPC_URL, "https://sepolia-rpc-flashblocks.giwa.io");
     this.client = createPublicClient({ chain, transport, batch: { multicall: { wait: 30 } } });
     this.wallet = env.TESTNET_KEEPER_KEY ? createWalletClient({ account: privateKeyToAccount(env.TESTNET_KEEPER_KEY as Hex), chain, transport }) : undefined;
+    this.copy = new CopyOperator(this.client, ctx.storage, (id, to, data) => this.send(id, to, data));
   }
   private serialize<T>(job: () => Promise<T>): Promise<T> { const next = this.tail.then(job, job); this.tail = next.catch(() => undefined); return next; }
   private async strategyCatalog(request: Request) {
@@ -281,14 +284,25 @@ export class TestnetOperator extends DurableObject<Env> {
     return { account, hash: result.hash };
   }
   async fetch(request: Request) {
+    const url = new URL(request.url);
     try {
-      const url = new URL(request.url);
       if (url.pathname === "/strategy-catalog") return await this.serialize(() => this.strategyCatalog(request));
       if (url.pathname === "/spot-anchor" && request.method === "POST") {
         const checkpoint = await request.json() as SpotAnchorRequest;
         return json(await this.serialize(() => this.publishSpotCheckpoint(checkpoint)));
       }
       if (url.pathname === "/tick") return json(await this.serialize(() => this.tick()));
+      if (url.pathname === "/copy-tick") {
+        await this.serialize(() => this.copy.tick());
+        return json(await this.copy.status());
+      }
+      if (url.pathname === "/copy/strategies") return json(await this.copy.list(url.searchParams.get("before")));
+      if (url.pathname === "/copy/accounts") return json(await this.copy.accounts(url.searchParams.get("owner")));
+      if (url.pathname === "/copy/status") return json({ lastTick: await this.copy.status() ?? null });
+      if (url.pathname === "/copy/relay") {
+        const body = await boundedBody(request);
+        return json(await this.serialize(() => this.copy.relay(body, request.headers.get("x-caller") ?? "unknown")));
+      }
       if (url.pathname === "/relay") { const body = await boundedBody(request); return json(await this.serialize(() => this.relay(body, request.headers.get("x-caller") ?? "unknown"))); }
       if (url.pathname === "/market") return json({ price: await this.cachedPrice(), history: await this.ctx.storage.get("price-history") ?? [], source: "Coinbase + Kraken · 서비스 게시 테스트 가격", mode: "TESTNET" });
       if (url.pathname === "/accounts") {
@@ -308,8 +322,9 @@ export class TestnetOperator extends DurableObject<Env> {
       const raw = failure instanceof Error ? failure.message : "요청을 처리하지 못했습니다.";
       // Keep provider diagnostics in operator logs, never signatures or raw transactions.
       const diagnostic = failure as { name?: string; shortMessage?: string; details?: string };
-      console.error("Testnet request failed", { path: new URL(request.url).pathname, name: diagnostic.name,
-        message: (diagnostic.shortMessage ?? raw.split("\n")[0]).slice(0, 300), details: diagnostic.details?.slice(0, 200) });
+      console.error("Testnet request failed", { path: url.pathname, name: diagnostic.name,
+        message: (diagnostic.shortMessage ?? raw.split("\n")[0]).slice(0, 300),
+        details: diagnostic.details?.replace(/0x[0-9a-f]{32,}/gi, "[redacted]").slice(0, 200) });
       const safe = /^[가-힣]/.test(raw) ? raw.slice(0, 300) : "테스트넷 요청을 처리하지 못했습니다. 잠시 후 새로고침해 주세요.";
       return json({ error: safe }, 400);
     }
@@ -352,9 +367,10 @@ const worker = {
       return secure(await actor.fetch(new Request(upstream, { method: request.method, headers: request.headers,
         body: request.method === "POST" ? request.body : undefined })));
     }
-    const allowed = ["/api/status", "/api/market", "/api/accounts", "/api/account", "/api/relay", "/api/strategy-catalog"];
+    const allowed = ["/api/status", "/api/market", "/api/accounts", "/api/account", "/api/relay", "/api/strategy-catalog",
+      "/api/copy/strategies", "/api/copy/accounts", "/api/copy/status", "/api/copy/relay"];
     if (!allowed.includes(url.pathname)) return secure(json({ error: "요청을 찾지 못했습니다." }, 404));
-    if (url.pathname === "/api/relay") {
+    if (url.pathname === "/api/relay" || url.pathname === "/api/copy/relay") {
       if (request.method !== "POST" || request.headers.get("origin") !== url.origin) return secure(json({ error: "이 서비스 화면에서 다시 요청해 주세요." }, 403));
     } else if (url.pathname === "/api/strategy-catalog" && request.method === "POST") {
       if (request.headers.get("origin") !== url.origin) return secure(json({ error: "이 서비스 화면에서 다시 요청해 주세요." }, 403));
@@ -369,7 +385,14 @@ const worker = {
   },
   async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext) {
     const actor = env.OPERATOR.get(env.OPERATOR.idFromName("giwa-sepolia-operator-v1"));
-    ctx.waitUntil(actor.fetch(new Request("https://operator.internal/tick")));
+    ctx.waitUntil((async () => {
+      try {
+        const result = await actor.fetch(new Request("https://operator.internal/copy-tick"));
+        if (!result.ok) console.error("Copy scheduler returned", result.status);
+      } finally {
+        await actor.fetch(new Request("https://operator.internal/tick"));
+      }
+    })());
   },
 };
 export default worker;

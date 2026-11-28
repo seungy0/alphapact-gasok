@@ -70,7 +70,7 @@ export async function ensureChain(provider: Provider) {
  }
  if (Number(await provider.request({ method: "eth_chainId" })) !== chain.id) throw new Error("지갑 네트워크를 GIWA Sepolia로 바꿔 주세요.");
 }
-async function sign(provider: Provider, owner: Address, typed: Record<string, unknown>): Promise<Hex> {
+export async function sign(provider: Provider, owner: Address, typed: Record<string, unknown>): Promise<Hex> {
  await ensureChain(provider);
  const active = await provider.request({ method: "eth_accounts" }) as string[];
  if (active[0]?.toLowerCase() !== owner.toLowerCase()) throw new Error("지갑 계정이 바뀌었습니다. 다시 연결해 주세요.");
