@@ -4,7 +4,8 @@ AlphaPact는 제작자 전략을 선택해 자기 계정에서 따라가고, 이
 
 ## 심사위원 데모
 
-- [전략 등록과 성과보수 모의 데모](https://phase4-review-alphapact-testnet.yhs98.workers.dev/)
+- [AlphaPact 공식 사이트](https://alphapact.pages.dev/)
+- [전략 등록과 성과보수 모의 데모](https://alphapact.pages.dev/demo)
 - [기존 GIWA Sepolia 실행 앱](https://alphapact-testnet.yhs98.workers.dev/app)
 - [지갑 없이 테스트 영수증 네 건 보기](https://alphapact-testnet.yhs98.workers.dev/#test-records)
 - [업비트 현물 공개 시세와 샘플 기록 대조](https://alphapact-testnet.yhs98.workers.dev/spot#spot-proof)
@@ -34,3 +35,5 @@ npm run spot:verify -- service/public/evidence/spot-checkpoint-sample.json --cha
 ```
 
 `npm run service:preview`는 프런트엔드를 띄웁니다. 테스트넷 실행과 계좌 API가 필요한 흐름은 위 공개 데모에서 확인할 수 있습니다. 비밀 키, 실제 계좌 내역과 운영 데이터는 이 패키지에 포함하지 않았습니다.
+
+공식 사이트는 Cloudflare Pages에서 빌드하고 배포합니다. 빌드 명령은 `npx vite build --config service/vite.config.ts --mode pages`입니다. 모의 전략 목록은 Pages Functions와 D1을 사용합니다. 하는 일과 현재 실행 범위는 공식 사이트에서 확인할 수 있습니다.

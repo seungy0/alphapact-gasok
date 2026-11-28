@@ -1,0 +1,10 @@
+{
+  "name": "alphapact",
+  "compatibility_date": "2026-10-31",
+  "pages_build_output_dir": "../dist",
+  "d1_databases": [{
+    "binding": "CATALOG",
+    "database_name": "alphapact-strategy-catalog",
+    "database_id": "46fceaa9-7531-41ea-a58f-5600dcf6640e"
+  }]
+}
