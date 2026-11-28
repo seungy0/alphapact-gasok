@@ -134,14 +134,17 @@ export class CopyOperator {
       interval: Number(strategy.interval), expiresAt: Number(entry.expiresAt), lastSequence: entry.fill?.sequence ?? 0 });
   }
 
-  private async quota(caller: string, stop: boolean) {
+  private async quota(caller: string, stop: boolean, jobId: string) {
     const day = Math.floor(nowSeconds() / 86_400);
     const callerKey = `${this.mode}-quota:${caller}`;
-    const globalKey = stop ? "copy-control-quota" : "copy-create-quota";
-    const keys = [callerKey, globalKey];
+    const globalKey = stop ? `${this.mode}-control-quota` : `${this.mode}-create-quota`;
+    const reservationKey = `quota-reservation:${jobId}`;
+    const keys = [callerKey, globalKey, reservationKey];
     const saved = await this.storage.get<{ day: number; count: number }>(keys);
     const recent = (key: string) => saved.get(key)?.day === day ? saved.get(key)!.count : 0;
-    if (recent(callerKey) >= (stop ? 40 : 12) || recent(globalKey) >= (stop ? 150 : 40)) {
+    if (recent(reservationKey)) return;
+    const globalLimit = stop ? 150 : this.mode === "algorithm" ? 20 : 40;
+    if (recent(callerKey) >= (stop ? 40 : 12) || recent(globalKey) >= globalLimit) {
       throw new Error("오늘의 테스트 가스 지원 한도에 도달했습니다. 내일 다시 시도해 주세요.");
     }
     await this.storage.put(Object.fromEntries(keys.map(key => [key, { day, count: recent(key) + 1 }])));
@@ -169,8 +172,9 @@ export class CopyOperator {
           return { strategyId: simulated.result, existing: true };
         }
       }
-      await this.quota(caller, false);
-      const result = await this.send(`copy-register:${keccak256(sig)}`, this.config.market, encodeFunctionData({ abi: copyAbi, functionName: "register", args }));
+      const jobId = `copy-register:${keccak256(sig)}`;
+      await this.quota(caller, false, jobId);
+      const result = await this.send(jobId, this.config.market, encodeFunctionData({ abi: copyAbi, functionName: "register", args }));
       this.catalogCache = undefined;
       const receipt = await this.client.getTransactionReceipt({ hash: result.hash });
       const event = parseEventLogs({ abi: copyAbi, eventName: "StrategyRegistered", logs: receipt.logs }).find(log =>
@@ -194,9 +198,10 @@ export class CopyOperator {
       let hash: Hex | undefined;
       const intentKey = `${this.mode}-intent:${request.owner}:${request.strategyId}`;
       if (id === 0n) {
-        await this.quota(caller, false);
+        const jobId = `${this.mode}-follow:${keccak256(sig)}`;
+        await this.quota(caller, false, jobId);
         await this.storage.put<FollowIntent>(intentKey, { owner: request.owner, strategyId: String(request.strategyId), deadline: Number(deadline) });
-        ({ hash } = await this.send(`${this.mode}-follow:${keccak256(sig)}`, this.config.market, encodeFunctionData(method)));
+        ({ hash } = await this.send(jobId, this.config.market, encodeFunctionData(method)));
         id = await this.client.readContract(lookup);
       }
       if (id === 0n) throw new Error("팔로우 결과가 아직 반영되지 않았습니다. 다시 시도해 주세요.");
@@ -215,7 +220,7 @@ export class CopyOperator {
       const jobId = `${this.mode}-control:${id}:${keccak256(data)}`;
       if (!await this.storage.get<BroadcastJob>(`job:${jobId}`)) {
         await this.client.simulateContract(method);
-        await this.quota(caller, true);
+        await this.quota(caller, true, jobId);
       }
       try {
         const result = await this.send(jobId, subscribed.account, data);
@@ -247,8 +252,9 @@ export class CopyOperator {
       args: [creator, name, amount, programHash] as const };
     let id = await this.client.readContract(lookup);
     if (id !== 0n) return { strategyId: id, existing: true };
-    await this.quota(caller, false);
-    const result = await this.send(`algorithm-register:${keccak256(sig)}`, this.config.market, encodeFunctionData(method));
+    const jobId = `algorithm-register:${keccak256(sig)}`;
+    await this.quota(caller, false, jobId);
+    const result = await this.send(jobId, this.config.market, encodeFunctionData(method));
     this.catalogCache = undefined;
     id = await this.client.readContract({ ...lookup, blockNumber: result.block });
     if (id === 0n) throw new Error("등록한 알고리즘이 아직 목록에 반영되지 않았습니다.");
