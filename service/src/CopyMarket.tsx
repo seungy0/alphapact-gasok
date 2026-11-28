@@ -195,8 +195,12 @@ export default function CopyMarket() {
     await run(kind === "stop" ? "지갑에서 팔로우 중지를 확인해 주세요." : "지갑에서 중지와 테스트 토큰 회수를 확인해 주세요.", async () => {
       const signature = await sign(connection.provider, connection.owner, { domain: actionDomain(active.account), types: actionTypes, primaryType: "OwnerAction", message });
       setPending("GIWA에서 요청을 처리하고 있습니다.");
-      const result = await api<{ hash: Hex }>("copy/relay", { kind, id: active.id, ...message, signature });
+      const result = await api<{ hash: Hex; pending: boolean }>("copy/relay", { kind, id: active.id, ...message, signature });
       setHash(result.hash);
+      if (result.pending) {
+        setNotice("요청을 보냈습니다. GIWA에서 확인되는 대로 계정 상태가 바뀝니다.");
+        return;
+      }
       setNotice(kind === "stop" ? "팔로우가 중지됐습니다." : "테스트 토큰을 연결한 지갑으로 보냈습니다.");
       setAccounts((await api<{ accounts: CopySubscription[] }>(accountPath(connection.owner, active.strategyId))).accounts);
     });

@@ -108,8 +108,11 @@ const message = { action: 1, sessionHash: sessionHash(ZERO_SESSION), sessionId: 
 const signature = await owners[0].signTypedData({ domain: actionDomain(entry.account), types: actionTypes, primaryType: "OwnerAction", message });
 const stop = await post<{ hash: Hex }>({ kind: "stop", id: entry.id, ...message, signature });
 assert.ok(stop.ok, JSON.stringify(stop));
+const stopReceipt = await rpc.waitForTransactionReceipt({ hash: stop.data.hash, timeout: 75_000 });
+assert.equal(stopReceipt.status, "success");
 const after = await get<{ accounts: CopySubscription[] }>(`accounts?owner=${entry.owner}`);
 assert.equal(after.accounts[0].active, false);
+assert.equal(after.accounts[0].revoked, true);
 assert.equal(BigInt(await rpc.readContract({ address: deployment.position, abi: tokenAbi, functionName: "balanceOf", args: [entry.account] })), BigInt(entry.position));
 
 const evidence = { chainId: 91342, market: deployment.market, keeper: deployment.keeper, strategyId: String(strategyId),

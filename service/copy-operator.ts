@@ -8,6 +8,7 @@ import { copyAbi, copyDeployment as config, scheduledRuleAbi } from "./copy-prot
 type Send = (id: string, to: Address, data: Hex) => Promise<{ hash: Hex; block: bigint }>;
 type QueueEntry = { account: Address; rule: Address; startsAt: number; interval: number; expiresAt: number; lastSequence: number };
 type FollowIntent = { owner: Address; strategyId: string; deadline: number };
+type BroadcastJob = { hash: Hex; done?: boolean; error?: string };
 type Fill = { hash: Hex; block: string; amountIn: string; amountOut: string; sequence: number };
 const nowSeconds = () => Math.floor(Date.now() / 1_000);
 
@@ -187,11 +188,22 @@ export class CopyOperator {
       const action = body.kind === "stop" ? 1 : 2;
       const args = [action, ZERO_SESSION, integer(body.sessionId, 1n, 10n ** 24n), integer(body.nonce, 0n, 10n ** 24n), deadline, sig] as const;
       const method = { address: subscribed.account, abi: accountAbi, functionName: "executeOwnerAction" as const, args };
-      await this.client.simulateContract(method);
-      await this.quota(caller, true);
-      const result = await this.send(`copy-control:${keccak256(sig)}`, subscribed.account, encodeFunctionData(method));
-      await this.storage.delete(`copy-queue:${id}`);
-      return { hash: result.hash };
+      const data = encodeFunctionData(method);
+      const jobId = `copy-control:${id}:${keccak256(data)}`;
+      if (!await this.storage.get<BroadcastJob>(`job:${jobId}`)) {
+        await this.client.simulateContract(method);
+        await this.quota(caller, true);
+      }
+      try {
+        const result = await this.send(jobId, subscribed.account, data);
+        await this.storage.delete(`copy-queue:${id}`);
+        return { hash: result.hash, pending: false };
+      } catch (failure) {
+        // Once a signed transaction is stored, a delayed RPC response cannot establish failure.
+        const broadcast = await this.storage.get<BroadcastJob>(`job:${jobId}`);
+        if (!broadcast || broadcast.error) throw failure;
+        return { hash: broadcast.hash, pending: !broadcast.done };
+      }
     }
     throw new Error("지원하지 않는 요청입니다.");
   }
