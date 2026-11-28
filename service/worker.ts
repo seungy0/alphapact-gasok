@@ -44,12 +44,14 @@ export class TestnetOperator extends DurableObject<Env> {
   private client;
   private wallet;
   private copy;
+  private algorithm;
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
     const transport = giwaTransport(env.GIWA_RPC_URL, "https://sepolia-rpc-flashblocks.giwa.io");
     this.client = createPublicClient({ chain, transport, batch: { multicall: { wait: 30 } } });
     this.wallet = env.TESTNET_KEEPER_KEY ? createWalletClient({ account: privateKeyToAccount(env.TESTNET_KEEPER_KEY as Hex), chain, transport }) : undefined;
     this.copy = new CopyOperator(this.client, ctx.storage, (id, to, data) => this.send(id, to, data));
+    this.algorithm = new CopyOperator(this.client, ctx.storage, (id, to, data) => this.send(id, to, data), "algorithm");
   }
   private serialize<T>(job: () => Promise<T>): Promise<T> { const next = this.tail.then(job, job); this.tail = next.catch(() => undefined); return next; }
   private async strategyCatalog(request: Request) {
@@ -296,12 +298,21 @@ export class TestnetOperator extends DurableObject<Env> {
         await this.serialize(() => this.copy.tick());
         return json(await this.copy.status());
       }
-      if (url.pathname === "/copy/strategies") return json(await this.copy.list(url.searchParams.get("before")));
-      if (url.pathname === "/copy/accounts") return json(await this.copy.accounts(url.searchParams.get("owner"), url.searchParams.get("strategyId")));
-      if (url.pathname === "/copy/status") return json({ lastTick: await this.copy.status() ?? null });
-      if (url.pathname === "/copy/relay") {
-        const body = await boundedBody(request);
-        return json(await this.serialize(() => this.copy.relay(body, request.headers.get("x-caller") ?? "unknown")));
+      if (url.pathname === "/algorithm-tick") {
+        await this.serialize(() => this.algorithm.tick());
+        return json(await this.algorithm.status());
+      }
+      const copyRoute = /^\/copy(\/algorithm)?\/(strategies|accounts|status|relay|signal)$/.exec(url.pathname);
+      if (copyRoute) {
+        const operator = copyRoute[1] ? this.algorithm : this.copy;
+        if (copyRoute[2] === "strategies") return json(await operator.list(url.searchParams.get("before")));
+        if (copyRoute[2] === "accounts") return json(await operator.accounts(url.searchParams.get("owner"), url.searchParams.get("strategyId")));
+        if (copyRoute[2] === "status") return json({ lastTick: await operator.status() ?? null });
+        if (copyRoute[2] === "signal" && copyRoute[1]) return json(await operator.signal(url.searchParams.get("strategyId")));
+        if (copyRoute[2] === "relay") {
+          const body = await boundedBody(request);
+          return json(await this.serialize(() => operator.relay(body, request.headers.get("x-caller") ?? "unknown")));
+        }
       }
       if (url.pathname === "/relay") { const body = await boundedBody(request); return json(await this.serialize(() => this.relay(body, request.headers.get("x-caller") ?? "unknown"))); }
       if (url.pathname === "/market") return json({ price: await this.cachedPrice(), history: await this.ctx.storage.get("price-history") ?? [], source: "Coinbase + Kraken · 서비스 게시 테스트 가격", mode: "TESTNET" });
@@ -368,9 +379,10 @@ const worker = {
         body: request.method === "POST" ? request.body : undefined })));
     }
     const allowed = ["/api/status", "/api/market", "/api/accounts", "/api/account", "/api/relay", "/api/strategy-catalog",
-      "/api/copy/strategies", "/api/copy/accounts", "/api/copy/status", "/api/copy/relay"];
+      "/api/copy/strategies", "/api/copy/accounts", "/api/copy/status", "/api/copy/relay", "/api/copy/algorithm/strategies",
+      "/api/copy/algorithm/accounts", "/api/copy/algorithm/status", "/api/copy/algorithm/relay", "/api/copy/algorithm/signal"];
     if (!allowed.includes(url.pathname)) return secure(json({ error: "요청을 찾지 못했습니다." }, 404));
-    if (url.pathname === "/api/relay" || url.pathname === "/api/copy/relay") {
+    if (url.pathname.endsWith("/relay")) {
       if (request.method !== "POST" || request.headers.get("origin") !== url.origin) return secure(json({ error: "이 서비스 화면에서 다시 요청해 주세요." }, 403));
     } else if (url.pathname === "/api/strategy-catalog" && request.method === "POST") {
       if (request.headers.get("origin") !== url.origin) return secure(json({ error: "이 서비스 화면에서 다시 요청해 주세요." }, 403));
@@ -387,8 +399,10 @@ const worker = {
     const actor = env.OPERATOR.get(env.OPERATOR.idFromName("giwa-sepolia-operator-v1"));
     ctx.waitUntil((async () => {
       try {
-        const result = await actor.fetch(new Request("https://operator.internal/copy-tick"));
-        if (!result.ok) console.error("Copy scheduler returned", result.status);
+        for (const job of ["algorithm-tick", "copy-tick"]) {
+          const result = await actor.fetch(new Request(`https://operator.internal/${job}`));
+          if (!result.ok) console.error("Copy scheduler returned", job, result.status);
+        }
       } finally {
         await actor.fetch(new Request("https://operator.internal/tick"));
       }

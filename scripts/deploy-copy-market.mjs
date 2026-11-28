@@ -9,18 +9,24 @@ const client = createPublicClient({ chain, transport });
 const keeper = JSON.parse(await readFile("service/deployment.json", "utf8")).keeper;
 const account = privateKeyToAccount((await readFile("outputs/testnet-secrets/giwa-sepolia-launch-20261031.key", "utf8")).trim());
 if (await client.getChainId() !== chain.id || account.address.toLowerCase() !== keeper.toLowerCase()) throw Error("GIWA_TESTNET_KEEPER_REQUIRED");
-const progressPath = "outputs/releases/copy-market-deploy.json";
+const algorithm = process.argv.includes("--algorithm");
+const mode = algorithm ? "algorithm" : "copy";
+const contract = algorithm ? "AlphaPactAlgorithmMarket" : "AlphaPactCopyMarket";
+const progressPath = `outputs/releases/${mode}-market-deploy.json`;
 const previous = await readFile(progressPath, "utf8").then(JSON.parse, failure => {
   if (failure.code !== "ENOENT") throw failure;
 });
-const artifact = JSON.parse(await readFile("artifacts/contracts/AlphaPactCopyMarket.sol/AlphaPactCopyMarket.json", "utf8"));
+const artifact = JSON.parse(await readFile(`artifacts/contracts/${contract}.sol/${contract}.json`, "utf8"));
 let hash = previous?.hash;
 if (!hash) {
   const wallet = createWalletClient({ account, chain, transport });
-  const gas = (await client.estimateGas({ account, data: artifact.bytecode })) * 115n / 100n;
+  const args = algorithm ? [JSON.parse(await readFile("service/copy-deployment.json", "utf8")).executor] : [];
+  const { encodeDeployData } = await import("viem");
+  const data = encodeDeployData({ abi: artifact.abi, bytecode: artifact.bytecode, args });
+  const gas = (await client.estimateGas({ account, data })) * 115n / 100n;
   const gasPrice = await client.getGasPrice();
   if (await client.getBalance({ address: account.address }) < gas * gasPrice + 50_000_000_000_000n) throw Error("INSUFFICIENT_TEST_GAS");
-  hash = await wallet.deployContract({ abi: artifact.abi, bytecode: artifact.bytecode, gas, gasPrice, type: "legacy" });
+  hash = await wallet.deployContract({ abi: artifact.abi, bytecode: artifact.bytecode, args, gas, gasPrice, type: "legacy" });
   await mkdir("outputs/releases", { recursive: true });
   await writeFile(progressPath, JSON.stringify({ hash }, null, 2) + "\n", { flag: "wx" });
 }
@@ -28,11 +34,11 @@ const receipt = await client.waitForTransactionReceipt({ hash, confirmations: 2,
 if (receipt.status !== "success" || !receipt.contractAddress) throw Error("COPY_MARKET_DEPLOYMENT_FAILED");
 const market = receipt.contractAddress;
 const addresses = {};
-for (const name of ["budget", "position", "referenceQuote", "router", "executor"]) {
+for (const name of ["budget", "position", "referenceQuote", "router", "executor", ...(algorithm ? ["replay"] : [])]) {
   addresses[name] = await client.readContract({ address: market, abi: parseAbi([`function ${name}() view returns (address)`]), functionName: name });
 }
 const deployment = { ready: true, chainId: chain.id, market, ...addresses, keeper, hash,
   block: String(receipt.blockNumber), marketCodeHash: keccak256(await client.getCode({ address: market })),
   priceMode: "FIXED_TEST_QUOTE", testPrice: 2_000, venueMode: "SIMULATED_TEST_VENUE" };
-await writeFile("service/copy-deployment.json", JSON.stringify(deployment, null, 2) + "\n");
+await writeFile(`service/${mode}-deployment.json`, JSON.stringify(deployment, null, 2) + "\n");
 console.log(deployment);

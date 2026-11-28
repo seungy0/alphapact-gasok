@@ -44,7 +44,7 @@
 .copy-form, .copy-form label, .copy-wallet-action label { display: grid; gap: 6px; }
 .copy-form { gap: 12px; }
 .copy-form label, .copy-wallet-action label { color: var(--market-ink); font-size: 14px; font-weight: 690; }
-.copy-form input, .copy-form select, .copy-wallet-action select { width: 100%; min-width: 0; min-height: 44px;
+.copy-form input, .copy-form select, .copy-form textarea, .copy-wallet-action select { width: 100%; min-width: 0; min-height: 44px;
   border: 1px solid #a9bfb4; background: #fff; color: var(--market-ink); border-radius: 5px; padding: 9px 10px; }
 .copy-form input { caret-color: var(--market-accent); }
 .copy-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
@@ -74,3 +74,15 @@
   .copy-topbar nav { font-size: 13px; }
   .copy-fields { grid-template-columns: 1fr; }
 }
+
+.algorithm-details { margin-top: 18px; padding-block: 12px; border-block: 1px solid var(--market-line); }
+.algorithm-details dl { margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.algorithm-details dt { font-size: 13px; color: var(--market-muted); }
+.algorithm-details dd { margin: 3px 0 0; font-size: 18px; font-weight: 740; color: var(--market-accent); }
+.algorithm-details p { font-size: 13px; color: var(--market-muted); margin: 8px 0 0; overflow-wrap: anywhere; }
+.algorithm-details summary, .copy-form summary { cursor: pointer; font-weight: 690; color: var(--market-accent); font-size: 14px; }
+.algorithm-details details { margin-top: 10px; }
+.algorithm-details details a { display: inline-block; margin-top: 10px; font-size: 13px; }
+.copy-form textarea { font: 13px/1.55 ui-monospace, monospace; resize: vertical; }
+.copy-form input[type="file"] { padding: 8px 9px; overflow: hidden; text-overflow: ellipsis; }
+.copy-topbar nav { flex-wrap: wrap; }

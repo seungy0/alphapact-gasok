@@ -8,6 +8,7 @@ const App = lazy(() => import("./App"));
 const SpotApp = lazy(() => import("./SpotApp"));
 const StrategyMarket = lazy(() => import("./StrategyMarket"));
 const CopyMarket = lazy(() => import("./CopyMarket"));
+const algorithm = ["/copy/algorithms", "/copy/algorithms/"].includes(location.pathname);
 const copy = ["/copy", "/copy/"].includes(location.pathname);
 const OfficialSite = lazy(() => import("./OfficialSite"));
 const spot = location.pathname === "/spot" || location.pathname.startsWith("/spot/");
@@ -17,11 +18,11 @@ const official = import.meta.env.MODE === "pages" && home && !legacyAnchor;
 const market = ["/market", "/demo", "/demo/"].includes(location.pathname) || (home && !official && !legacyAnchor);
 const introduction = location.pathname === "/about" || (home && legacyAnchor);
 document.documentElement.classList.toggle("intro-document", introduction);
-document.title = copy ? "AlphaPact | GIWA 전략 마켓" : official ? "AlphaPact — 내 계정에서 따라가는 자동매매 전략" : market ? "AlphaPact — 전략 마켓과 성과보수 체험" : spot ? "AlphaPact — 업비트 현물 연결" : introduction ? "AlphaPact — 내 지갑으로 시작하는 자동매매" : "AlphaPact — 내 지갑으로 시작하는 전략 운용";
+document.title = algorithm ? "AlphaPact | 알고리즘 전략" : copy ? "AlphaPact | GIWA 전략 마켓" : official ? "AlphaPact — 내 계정에서 따라가는 자동매매 전략" : market ? "AlphaPact — 전략 마켓과 성과보수 체험" : spot ? "AlphaPact — 업비트 현물 연결" : introduction ? "AlphaPact — 내 지갑으로 시작하는 자동매매" : "AlphaPact — 내 지갑으로 시작하는 전략 운용";
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <Suspense fallback={<div className="intro-app-loading" role="status">서비스를 불러오고 있습니다.</div>}>
-      {copy ? <CopyMarket/> : official ? <OfficialSite/> : market ? <StrategyMarket/> : spot ? <SpotApp/> : introduction ? <Landing/> : <App/>}
+      {copy || algorithm ? <CopyMarket algorithm={algorithm}/> : official ? <OfficialSite/> : market ? <StrategyMarket/> : spot ? <SpotApp/> : introduction ? <Landing/> : <App/>}
     </Suspense>
   </React.StrictMode>,
 );

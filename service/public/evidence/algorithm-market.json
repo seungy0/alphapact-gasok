@@ -1,0 +1,28 @@
+{
+  "chainId": 91342,
+  "market": "0xb5d414c91dca86c31af332ae5c855731383511ab",
+  "replay": "0x23f37f17D9D69740671C65c189B8FAEd09254868",
+  "registration": "0x8d072f32d67f5a2748f65497031165896b92e1c7840850160b3e4c500b017786",
+  "follow": "0x3256713c84e94bdfddd19648ef4d9ece79a623d78fc4ab3de082ff4feb531cef",
+  "swap": "0x5a0d83761eaf02c8bb5a0b751eb1002985bfe8fd6fd4163daeeaf8af709e5b71",
+  "block": "42533310",
+  "close": 197800,
+  "signalSequence": "5",
+  "buy": {
+    "id": "1",
+    "name": "ETH 종가와 평균 조건",
+    "rule": "0xa9d77FD901DfC82C9aC461B528c8D881E749d601",
+    "programHash": "0x24619ae11d04ada09b97f7c991c6257389805415f6e83b9e54cf4001db6696cf",
+    "spent": "100000000",
+    "received": "49850000000000000",
+    "account": "0xf0166A34653F6aC9eba1F694b1A038ec5545eF1f",
+    "owner": "0xF60318D50776A5B348204E18A709968fA4c430b1"
+  },
+  "hold": {
+    "id": "2",
+    "name": "가격 범위가 벗어날 때만 거래",
+    "rule": "0x881A42015Cf3E830240F41e56221b237aE278F36",
+    "programHash": "0x60b088c7d77923f51f92d36a590c8f39d7e45a2d59d27f47f5f06ec265bfc866"
+  },
+  "data": "SYNTHETIC_CANDLE_REPLAY"
+}

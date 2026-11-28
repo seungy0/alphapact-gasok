@@ -1,5 +1,6 @@
 import { formatUnits, type Hex } from "viem";
 import proof from "../public/evidence/copy-market.json";
+import algorithm from "../public/evidence/algorithm-market.json";
 import { evidenceTransaction } from "./evidence";
 import "./official.css";
 
@@ -28,23 +29,23 @@ function Wordmark() {
 function SwapReceipt() {
   return <aside className="official-receipt" aria-labelledby="official-receipt-title">
     <div className="official-receipt-head">
-      <div><span>GIWA Sepolia</span><h2 id="official-receipt-title">두 팔로워의 자동 매수</h2></div>
+      <div><span>GIWA Sepolia</span><h2 id="official-receipt-title">같은 종가에서 두 알고리즘을 실행</h2></div>
       <span className="official-record-state"><i/> 확인 완료</span>
     </div>
     <div className="official-receipt-swap">
-      <div><span>팔로워 A</span><strong>{formatUnits(BigInt(first.spent), 6)}<small> tUSD</small></strong></div>
-      <div><span>팔로워 B</span><strong>{formatUnits(BigInt(second.spent), 6)}<small> tUSD</small></strong></div>
+      <div><span>종가와 평균 조건</span><strong>{formatUnits(BigInt(algorithm.buy.spent), 6)}<small> tUSD 매수</small></strong></div>
+      <div><span>가격 범위 조건</span><strong>대기</strong></div>
     </div>
     <div className="official-receipt-foot">
-      <span>같은 전략, 각자의 거래 한도</span>
+      <span>테스트 종가 {(algorithm.close / 100).toLocaleString("ko-KR")} USD</span>
       <a href="#proof">영수증 보기 <Direction/></a>
     </div>
   </aside>;
 }
 
 const walkthrough = [
-  { title: "제작자가 전략을 올립니다", detail: "지갑으로 서명해 매수 금액과 간격을 등록하면 전략 마켓에 공개됩니다." },
-  { title: "이용자가 한도를 정합니다", detail: "거래당 한도와 24시간 한도를 정해 한 번 서명하면 자동 매수가 시작됩니다." },
+  { title: "제작자가 알고리즘을 올립니다", detail: "종가나 이동평균을 써서 매수와 매도 조건을 작성한 뒤 서명하면 전략 마켓에 공개됩니다." },
+  { title: "이용자가 한도를 정합니다", detail: "거래당 한도와 24시간 한도를 정해 한 번 서명하면 이후 신호에 따라 매매가 나갑니다." },
   { title: "거래 결과를 확인합니다", detail: "테스트 교환의 원본을 열거나 언제든 매매를 중지하고 보유 토큰을 회수할 수 있습니다." },
 ];
 
@@ -59,7 +60,7 @@ export default function OfficialSite() {
           <a href="#fees">성과보수</a>
           <a href="#proof">거래 기록</a>
         </nav>
-        <a className="official-button official-button-outline" href="/copy">전략 마켓 <Direction/></a>
+        <a className="official-button official-button-outline" href="/copy/algorithms">전략 마켓 <Direction/></a>
       </div>
     </header>
 
@@ -69,7 +70,7 @@ export default function OfficialSite() {
           <h1 id="official-title">내 계정에서 따라가는<br/>자동매매 전략</h1>
           <p>제작자가 올린 전략을 고르고 거래 한도와 기간을 정하세요. 누적 손실을 메우고 새로 번 이익에서만 성과보수를 나누는 구조를 시험하고 있습니다.</p>
           <div className="official-actions">
-            <a className="official-button official-button-primary" href={`/copy?strategy=${proof.strategyId}`}>전략 팔로우 <Direction/></a>
+            <a className="official-button official-button-primary" href={`/copy/algorithms?strategy=${algorithm.buy.id}`}>알고리즘 팔로우 <Direction/></a>
             <a className="official-text-link" href="/demo">성과보수 체험 <Direction/></a>
           </div>
         </div>
@@ -79,7 +80,7 @@ export default function OfficialSite() {
             <span aria-hidden="true" className="official-eth">
               <svg width="21" height="28" viewBox="0 0 22 32" fill="none"><path d="m11 1 9 15-9 5-9-5 9-15Z" stroke="currentColor" strokeWidth="1.5"/><path d="m2 19 9 12 9-12-9 5-9-5Z" fill="currentColor"/></svg>
             </span>
-            <div><span>제작자가 등록한 전략</span><strong>{proof.strategy.name}</strong></div>
+            <div><span>제작자가 등록한 알고리즘</span><strong>ETH 매수·매도 조건</strong></div>
           </div>
           <SwapReceipt/>
         </div>
@@ -89,7 +90,7 @@ export default function OfficialSite() {
         <div className="official-width official-method-grid">
           <div>
             <h2 id="official-method-title">따라갈 전략과<br/>허용할 거래를 정하세요</h2>
-            <a className="official-text-link" href="/copy">전략 마켓 열기 <Direction/></a>
+            <a className="official-text-link" href="/copy/algorithms">전략 마켓 열기 <Direction/></a>
           </div>
           <ol>
             {walkthrough.map((item, index) => <li key={item.title}>
@@ -120,12 +121,13 @@ export default function OfficialSite() {
         <div className="official-width official-proof-grid">
           <div>
             <h2 id="official-proof-title">GIWA에서 확인할 수 있는 것</h2>
-            <p>제작자가 250 tUSD 정기 매수를 등록했습니다. 한도를 100 tUSD로 정한 계정은 100 tUSD, 250 tUSD로 정한 계정은 250 tUSD를 자동으로 교환했습니다. 고정 가격을 쓰는 테스트 토큰 거래입니다.</p>
+            <p>같은 테스트 종가에서 종가와 평균을 비교한 전략은 매수, 가격 범위를 검사한 전략은 대기를 냈습니다. 매수는 팔로워가 정한 한도인 100 tUSD에 맞춰 실행됐습니다. 합성 종가와 고정 환율의 테스트 토큰을 사용했습니다.</p>
           </div>
           <ul>
-            <li><a href={explorerTx(proof.registration)} target="_blank" rel="noreferrer">제작자의 전략 등록 <Direction outward/></a></li>
-            <li><a href={explorerTx(first.hash)} target="_blank" rel="noreferrer">팔로워 A · 100 tUSD 자동 매수 <Direction outward/></a></li>
-            <li><a href={explorerTx(second.hash)} target="_blank" rel="noreferrer">팔로워 B · 250 tUSD 자동 매수 <Direction outward/></a></li>
+            <li><a href={explorerTx(algorithm.registration)} target="_blank" rel="noreferrer">제작자의 알고리즘 등록 <Direction outward/></a></li>
+            <li><a href={explorerTx(algorithm.swap)} target="_blank" rel="noreferrer">알고리즘 신호로 자동 매수 <Direction outward/></a></li>
+            <li><a href={explorerTx(first.hash)} target="_blank" rel="noreferrer">정기 매수 검증 100 tUSD <Direction outward/></a></li>
+            <li><a href={explorerTx(second.hash)} target="_blank" rel="noreferrer">정기 매수 검증 250 tUSD <Direction outward/></a></li>
             <li><a href={directRecovery} target="_blank" rel="noreferrer">실행 API 차단 중 소유자 직접 회수 <Direction outward/></a></li>
             <li><a href={source} target="_blank" rel="noreferrer">공개 소스 코드 <Direction outward/></a></li>
           </ul>

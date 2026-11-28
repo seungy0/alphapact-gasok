@@ -18,6 +18,7 @@ export const copyAbi = parseAbi([
   "function ownerSubscriptionCount(address owner) view returns (uint256)",
   "function ownerSubscriptionAt(address owner, uint256 index) view returns (uint256)",
   "event StrategyRegistered(uint256 indexed strategyId, address indexed creator, string name, uint128 amount, uint64 interval)",
+  "event StrategyFollowed(uint256 indexed subscriptionId, uint256 indexed strategyId, address indexed owner, address account, address rule)",
 ]);
 export const scheduledRuleAbi = parseAbi(["function execute(address account) returns (uint256)"]);
 export const copyDomain = { name: "AlphaPactCopyMarket", version: "1", chainId: 91342, verifyingContract: copyDeployment.market } as const;
@@ -30,8 +31,10 @@ export const followTypes = { FollowStrategy: [
   { name: "maxRollingDayBudget", type: "uint128" }, { name: "expiresAt", type: "uint64" }, { name: "deadline", type: "uint64" },
 ] } as const;
 
-export interface CopyStrategy { id: string; creator: Address; name: string; amount: string; interval: string }
-export interface CopyFill { hash: Hex; block: string; amountIn: string; amountOut: string; sequence: number }
+export interface CopyStrategy { id: string; creator: Address; name: string; amount: string; interval: string;
+  rule?: Address; programHash?: Hex; buyCondition?: Hex; sellCondition?: Hex }
+export interface CopyFill { hash: Hex; block: string; amountIn: string; amountOut: string; sequence: number;
+  side?: "BUY" | "SELL"; signalSequence?: string; close?: number }
 export interface CopySubscription {
   id: string; owner: Address; strategyId: string; account: Address; rule: Address; startsAt: string;
   expiresAt: string; sessionId: string; authorizationNonce: string; active: boolean; revoked: boolean;
